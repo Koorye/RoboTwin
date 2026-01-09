@@ -19,6 +19,7 @@ import openpi.models.pi0_fast as pi0_fast
 import openpi.models.tokenizer as _tokenizer
 import openpi.policies.aloha_policy as aloha_policy
 import openpi.policies.droid_policy as droid_policy
+import openpi.policies.franka_policy as franka_policy
 import openpi.policies.libero_policy as libero_policy
 import openpi.shared.download as _download
 import openpi.shared.normalize as _normalize
@@ -264,8 +265,8 @@ class LeRobotFrankaDataConfig(DataConfigFactory):
     @override
     def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
         data_transforms = _transforms.Group(
-            inputs=[aloha_policy.AlohaInputs(action_dim=model_config.action_dim, adapt_to_pi=self.adapt_to_pi)],
-            outputs=[aloha_policy.AlohaOutputs(adapt_to_pi=self.adapt_to_pi)],
+            inputs=[franka_policy.FrankaInputs(action_dim=model_config.action_dim)],
+            outputs=[franka_policy.FrankaOutputs()],
         )
         if self.use_delta_joint_actions:
             delta_action_mask = _transforms.make_bool_mask(7, -1, 7, -1)
@@ -549,9 +550,8 @@ _CONFIGS = [
     TrainConfig(
         name="pi0_base_franka_robotwin_lora",
         model=pi0.Pi0Config(paligemma_variant="gemma_2b_lora", action_expert_variant="gemma_300m_lora"),
-        data=LeRobotAlohaDataConfig(
-            repo_id="test",  # your datasets repo_id
-            adapt_to_pi=False,
+        data=LeRobotFrankaDataConfig(
+            repo_id="franka_place_can_basket_20260109",  # your datasets repo_id
             repack_transforms=_transforms.Group(inputs=[
                 _transforms.RepackTransform({
                     "images": {
@@ -573,7 +573,7 @@ _CONFIGS = [
                                     action_expert_variant="gemma_300m_lora").get_freeze_filter(),
         batch_size=32,  # the total batch_size not pre_gpu batch_size
         weight_loader=weight_loaders.CheckpointWeightLoader("s3://openpi-assets/checkpoints/pi0_base/params"),
-        num_train_steps=1000,
+        num_train_steps=3000,
         fsdp_devices=1,  # refer line 359
     ),
 ]
